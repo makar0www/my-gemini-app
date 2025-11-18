@@ -7,21 +7,11 @@ export async function generateImage(prompt: string): Promise<string> {
     model: "gemini-1.5-flash",
   });
 
-  const result = await model.generateContent({
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt }
-        ]
-      }
-    ],
-    generationConfig: {
-      responseMimeType: "image/png",
+  const result = await model.generateContent([
+    {
+      text: prompt
     }
-  });
-
-  // --- БЕЗОПАСНЫЕ ПРОВЕРКИ ---
+  ]);
 
   const candidates = result.response?.candidates;
   if (!candidates || candidates.length === 0) {
@@ -33,13 +23,12 @@ export async function generateImage(prompt: string): Promise<string> {
     throw new Error("Gemini не вернул parts");
   }
 
-  const imagePart = parts[0];
+  // ищем part с картинкой
+  const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith("image/"));
 
-  if (!imagePart.inlineData?.data) {
-    throw new Error("Gemini не вернул inlineData (нет изображения)");
+  if (!imagePart || !imagePart.inlineData?.data) {
+    throw new Error("Gemini не прислал изображение");
   }
 
-  // --- BASE64 PNG ---
-  return imagePart.inlineData.data;
+  return imagePart.inlineData.data; // base64
 }
-
