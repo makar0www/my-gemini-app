@@ -4,13 +4,11 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export async function generateImage(prompt: string): Promise<string> {
   const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
+    model: "gemini-1.5-flash-latest",
   });
 
   const result = await model.generateContent([
-    {
-      text: prompt
-    }
+    { text: prompt }
   ]);
 
   const candidates = result.response?.candidates;
@@ -24,7 +22,9 @@ export async function generateImage(prompt: string): Promise<string> {
   }
 
   // ищем part с картинкой
-  const imagePart = parts.find(p => p.inlineData?.mimeType?.startsWith("image/"));
+  const imagePart = parts.find(
+    p => p.inlineData?.mimeType?.startsWith("image/")
+  );
 
   if (!imagePart || !imagePart.inlineData?.data) {
     throw new Error("Gemini не прислал изображение");
