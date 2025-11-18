@@ -1,24 +1,45 @@
-export async function generateImage(prompt: string) {
-  const url =
-    "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0:generateImage?key=" +
-    process.env.GEMINI_API_KEY;
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      prompt: { text: prompt },
-      image: { height: 1024, width: 1024 }
-    }),
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+export async function generateImage(prompt: string): Promise<string> {
+  const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
   });
 
-  const data = await response.json();
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: "user",
+        parts: [
+          { text: prompt }
+        ]
+      }
+    ],
+    generationConfig: {
+      responseMimeType: "image/png",
+    }
+  });
 
-  console.log("GEMINI RESPONSE:", data); // 👈 самое важное
+  // --- БЕЗОПАСНЫЕ ПРОВЕРКИ ---
 
-  if (!data.images) {
-    throw new Error(data.error?.message || "No images returned");
+  const candidates = result.response?.candidates;
+  if (!candidates || candidates.length === 0) {
+    throw new Error("Gemini не вернул кандидатов");
   }
 
-  return data.images[0].data;
+  const parts = candidates[0].content?.parts;
+  if (!parts || parts.length === 0) {
+    throw new Error("Gemini не вернул parts");
+  }
+
+  const imagePart = parts[0];
+
+  if (!imagePart.inlineData?.data) {
+    throw new Error("Gemini не вернул inlineData (нет изображения)");
+  }
+
+  // --- BASE64 PNG ---
+  return imagePart.inlineData.data;
 }
+
